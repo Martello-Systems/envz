@@ -5,7 +5,7 @@ import { analyze, pickPrimary } from "../summarize.js";
 import { discover } from "../discover.js";
 import { parseEnv } from "../parse.js";
 import { fillFromSibling } from "../fill.js";
-import { applyEnvUpdates } from "../write-env.js";
+import { applyEnvUpdates, safeEnvTarget } from "../write-env.js";
 import { readFile } from "node:fs/promises";
 
 const STATUS_COLOR = {
@@ -83,12 +83,17 @@ export default function App({ root }) {
         return;
       }
       // persist to the target's primary .env (create path if needed)
-      const targetEnvAbs = targetPkg.envFile
-        ? path.join(root, targetPkg.envFile)
-        : path.join(root, targetPkg.relDir === "." ? "" : targetPkg.relDir, ".env");
-      await applyEnvUpdates(targetEnvAbs, { [key]: merged[key] });
-      setMessage(`Filled ${key} from ${donorRel}`);
-      await load();
+      const candidate = targetPkg.envFile
+        ? targetPkg.envFile
+        : path.join(targetPkg.relDir === "." ? "" : targetPkg.relDir, ".env");
+      try {
+        const targetEnvAbs = safeEnvTarget(root, candidate);
+        await applyEnvUpdates(targetEnvAbs, { [key]: merged[key] });
+        setMessage(`Filled ${key} from ${donorRel}`);
+        await load();
+      } catch (err) {
+        setMessage(`Could not write ${key}: ${err.message}`);
+      }
     },
     [siblings, root, load]
   );

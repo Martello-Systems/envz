@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { applyEnvUpdates } from "../src/write-env.js";
+import { applyEnvUpdates, safeEnvTarget } from "../src/write-env.js";
 import { parseEnv } from "../src/parse.js";
 
 async function tmpFile(content) {
@@ -47,4 +47,20 @@ test("preserves export prefix when updating", async () => {
   await applyEnvUpdates(file, { PORT: "4000" });
   const out = await readFile(file, "utf8");
   assert.ok(out.includes("export PORT=4000"));
+});
+
+test("safeEnvTarget accepts an in-workspace .env path", () => {
+  const root = "/work/repo";
+  assert.equal(safeEnvTarget(root, "packages/web/.env"), path.join(root, "packages/web/.env"));
+  assert.equal(safeEnvTarget(root, "packages/web/.env.local"), path.join(root, "packages/web/.env.local"));
+});
+
+test("safeEnvTarget rejects path traversal outside the workspace", () => {
+  assert.throws(() => safeEnvTarget("/work/repo", "../../etc/.env"), /outside workspace/);
+  assert.throws(() => safeEnvTarget("/work/repo", "/etc/.env"), /outside workspace/);
+});
+
+test("safeEnvTarget rejects non-.env target files", () => {
+  assert.throws(() => safeEnvTarget("/work/repo", "packages/web/config.json"), /non-.env file/);
+  assert.throws(() => safeEnvTarget("/work/repo", "secrets.txt"), /non-.env file/);
 });

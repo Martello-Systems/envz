@@ -1,4 +1,29 @@
 import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+/**
+ * Resolve a target env path and assert it is (a) inside `root` (no traversal)
+ * and (b) a member of the `.env` family. Throws on violation. Used by the
+ * TUI/CLI before any write so a malformed package path can never escape the
+ * workspace or clobber a non-env file.
+ *
+ * @param {string} root absolute workspace root
+ * @param {string} candidate absolute or root-relative path to the target file
+ * @returns {string} the validated absolute path
+ */
+export function safeEnvTarget(root, candidate) {
+  const absRoot = path.resolve(root);
+  const abs = path.resolve(absRoot, candidate);
+  const rel = path.relative(absRoot, abs);
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error(`refusing to write outside workspace: ${candidate}`);
+  }
+  const base = path.basename(abs);
+  if (base !== ".env" && !base.startsWith(".env.")) {
+    throw new Error(`refusing to write a non-.env file: ${base}`);
+  }
+  return abs;
+}
 
 /**
  * Apply a set of key->value updates to a .env file ON DISK, preserving the

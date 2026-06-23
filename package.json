@@ -17,6 +17,7 @@
   ],
   "scripts": {
     "test": "node --test",
+    "lint": "eslint bin src test",
     "start": "node bin/envz.js"
   },
   "keywords": [
@@ -42,6 +43,8 @@
     "yaml": "^2.5.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
     "ink-testing-library": "^4.0.0"
   }
 }
