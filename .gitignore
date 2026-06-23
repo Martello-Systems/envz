@@ -1,0 +1,12 @@
+node_modules/
+
+# Ignore real env files, but NOT the test fixtures (those are intentional test data)
+.env
+.env.*
+!.env.example
+!test/fixtures/**/.env
+!test/fixtures/**/.env.*
+
+# Logs / OS cruft
+*.log
+.DS_Store

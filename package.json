@@ -1,0 +1,47 @@
+{
+  "name": "envz",
+  "version": "0.1.0",
+  "description": "lazygit for your .env files — a monorepo-native TUI to browse, diff, and sync environment variables across packages and profiles in a JS monorepo.",
+  "type": "module",
+  "bin": {
+    "envz": "bin/envz.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "start": "node bin/envz.js"
+  },
+  "keywords": [
+    "env",
+    "dotenv",
+    "tui",
+    "monorepo",
+    "turborepo",
+    "pnpm",
+    "workspace",
+    "environment-variables",
+    "cli"
+  ],
+  "author": "Martello Systems",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ink": "^5.0.1",
+    "react": "^18.3.1",
+    "tinyglobby": "^0.2.10",
+    "yaml": "^2.5.1"
+  },
+  "devDependencies": {
+    "ink-testing-library": "^4.0.0"
+  }
+}
