@@ -1,5 +1,7 @@
 # envz
 
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Built by Martello Systems](https://img.shields.io/badge/built%20by-Martello%20Systems-0b0b14)](https://martellosystems.com)
+
 **lazygit for your `.env` files.** A monorepo-native TUI to browse, diff, and sync
 environment variables across the packages and profiles of a JS monorepo.
 
@@ -240,3 +242,11 @@ Built by **[Martello Systems](https://martellosystems.com)** — we build
 AI-assisted software and dev tooling. This is one of a family of open-source dev
 tools we use internally and released. See what we build → open an issue, or get
 in touch.
+
+---
+
+## Built by Martello Systems
+
+`envz` is part of the open-source toolkit from **[Martello Systems](https://martellosystems.com)** — we ship AI-built software, spec to delivery in days. If this saved you time, come [see what we do](https://martellosystems.com).
+
+Licensed under the [Apache License 2.0](LICENSE).
