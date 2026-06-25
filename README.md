@@ -37,9 +37,9 @@ and classifies every key:
 ## Install
 
 ```bash
-npm install -g envz
+npm install -g @martello-systems/envz
 # or run without installing:
-npx envz
+npx @martello-systems/envz
 ```
 
 Requires Node 18+.
@@ -65,10 +65,10 @@ envz --help
 
 ```yaml
 # fail the build if any required env key is missing or blank
-- run: npx envz check
+- run: npx @martello-systems/envz check
 
 # or consume the JSON report in your own tooling
-- run: npx envz check --json > env-report.json
+- run: npx @martello-systems/envz check --json > env-report.json
 ```
 
 `envz check` prints a per-package report and exits `1` when any key declared in a
@@ -133,7 +133,7 @@ skipped — they're meant to be committed. Exits `1` if anything is at risk, `0`
 when clean, so it drops straight into CI:
 
 ```yaml
-- run: npx envz audit   # fail the build if a real .env is committable
+- run: npx @martello-systems/envz audit   # fail the build if a real .env is committable
 ```
 
 It reports only file paths and a value *count*, never the secret values
