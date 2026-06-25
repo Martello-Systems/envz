@@ -21,6 +21,17 @@ import YAML from "yaml";
 const EXAMPLE_RE = /\.(example|sample|template|dist)$/i;
 
 /**
+ * Normalize a path to forward slashes so every emitted/displayed path is stable
+ * across platforms. `path.relative` yields backslashes on Windows, which would
+ * otherwise leak into JSON reports, the CLI, the TUI, and break key lookups.
+ * @param {string} p
+ * @returns {string}
+ */
+export function toPosix(p) {
+  return p.replace(/\\/g, "/");
+}
+
+/**
  * Is this filename a .env-family file?
  * Matches `.env`, `.env.local`, `.env.example`, `.env.production`, etc.
  * @param {string} name
@@ -134,7 +145,7 @@ export async function listEnvFiles(dir, root) {
     out.push({
       name,
       path: abs,
-      relPath: path.relative(root, abs) || name,
+      relPath: toPosix(path.relative(root, abs)) || name,
       isExample: isExampleName(name),
     });
   }
@@ -188,7 +199,7 @@ export async function discover(root) {
     packages.push({
       name: await readPkgName(dir),
       dir,
-      relDir: path.relative(abs, dir),
+      relDir: toPosix(path.relative(abs, dir)),
       isRoot: false,
       envFiles: await listEnvFiles(dir, abs),
     });

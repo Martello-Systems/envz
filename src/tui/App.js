@@ -1,12 +1,35 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Box, Text, useInput, useApp } from "ink";
 import path from "node:path";
-import { analyze, pickPrimary } from "../summarize.js";
+import { analyze } from "../summarize.js";
 import { discover } from "../discover.js";
 import { parseEnv } from "../parse.js";
 import { fillFromSibling } from "../fill.js";
 import { applyEnvUpdates, safeEnvTarget } from "../write-env.js";
+import { classifyEnvFile, effectiveValues, DEFAULT_PROFILE } from "../profiles.js";
 import { readFile } from "node:fs/promises";
+
+/**
+ * Compute a package's *effective* default-profile values, layering its real
+ * env files in precedence order (`.env.local` over `.env`) the same way the app
+ * loads them at runtime. This is the documented fill source: a value set only in
+ * a sibling's `.env.local` is still a valid donor.
+ * @param {import("../discover.js").EnvFile[]} envFiles
+ * @returns {Promise<Record<string,string>>}
+ */
+async function effectiveDefaultValues(envFiles) {
+  const valuesByFile = {};
+  for (const f of envFiles) {
+    const cls = classifyEnvFile(f.name);
+    if (!cls || cls.isTemplate || cls.profile !== DEFAULT_PROFILE) continue;
+    try {
+      valuesByFile[f.name] = parseEnv(await readFile(f.path, "utf8")).values;
+    } catch {
+      valuesByFile[f.name] = {};
+    }
+  }
+  return effectiveValues(DEFAULT_PROFILE, valuesByFile).values;
+}
 
 const STATUS_COLOR = {
   present: "green",
@@ -38,20 +61,13 @@ export default function App({ root }) {
   const load = useCallback(async () => {
     const a = await analyze(root);
     setAnalysis(a);
-    // load sibling value maps (primary .env per package) for fill source
+    // load sibling value maps (effective default-profile values per package)
+    // as the fill source, so `.env.local` overrides are honored just like the
+    // app loads them.
     const { packages } = await discover(root);
     const sib = {};
     for (const p of packages) {
-      const { env } = pickPrimary(p.envFiles);
-      if (env) {
-        try {
-          sib[p.relDir] = parseEnv(await readFile(env.path, "utf8")).values;
-        } catch {
-          sib[p.relDir] = {};
-        }
-      } else {
-        sib[p.relDir] = {};
-      }
+      sib[p.relDir] = await effectiveDefaultValues(p.envFiles);
     }
     setSiblings(sib);
   }, [root]);

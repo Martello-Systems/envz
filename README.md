@@ -55,6 +55,9 @@ envz check           # CI-friendly check; non-zero exit if a required key is mis
 envz check --json            # machine-readable report (see shape below)
 envz check --allow-empty     # treat blank values as acceptable
 envz check --fail-on-extra   # also fail on keys not in .env.example
+envz check --profiles        # also print the per-profile breakdown per package
+envz audit           # flag .env files with real values that git tracks / doesn't ignore
+envz audit --json            # machine-readable audit report
 envz --help
 ```
 
@@ -96,14 +99,46 @@ exit code as the text check (`0` = clean, `1` = drift). Shape:
       "missing": ["ANALYTICS_KEY"],
       "empty": ["FEATURE_FLAG_BETA"],
       "extra": [],
-      "present": ["NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_SITE_NAME"]
+      "present": ["NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_SITE_NAME"],
+      "profiles": [
+        {
+          "profile": "default",
+          "templateFile": "packages/web/.env.example",
+          "layers": [".env"],
+          "missing": ["ANALYTICS_KEY"],
+          "empty": ["FEATURE_FLAG_BETA"],
+          "extra": [],
+          "present": ["NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_SITE_NAME"]
+        }
+      ]
     }
   ]
 }
 ```
 
 `failures` reflects the active flags: `--allow-empty` drops `empty` from the
-count, `--fail-on-extra` adds `extra`.
+count, `--fail-on-extra` adds `extra`. Every package carries a `profiles` array
+with the full per-profile breakdown (`default` plus any named profiles like
+`production`); `failures`/`summary` still roll up the **default** profile. Add
+`--profiles` to the text check to print that breakdown too.
+
+### `envz audit` — did a secret get committed?
+
+`envz audit` is the `.env`-tooling take on the classic "oops, the real `.env`
+is in the repo" mistake. It scans every **real** (non-template) `.env*` file
+that holds a non-empty value and flags the ones git would carry: either already
+**tracked**, or sitting **un-gitignored** where the next `git add .` sweeps them
+in. Template files (`.env.example` / `.sample` / `.template` / `.dist`) are
+skipped — they're meant to be committed. Exits `1` if anything is at risk, `0`
+when clean, so it drops straight into CI:
+
+```yaml
+- run: npx envz audit   # fail the build if a real .env is committable
+```
+
+It reports only file paths and a value *count*, never the secret values
+themselves. Outside a git work tree it reports cleanly and exits `0` (it can't
+know what's tracked).
 
 ## Profiles & precedence
 
@@ -224,9 +259,10 @@ written), and `check --json` is tested for both shape and exit code. All fixture
 
 - **Reads the files on disk only.** No secret storage, encryption, or vault sync
   (that's [Infisical](https://infisical.com)'s lane, on purpose).
-- **`check` / `summary` report the default profile.** Per-profile detail is
-  available via the programmatic `analyze()` API (`pkg.profiles`), not yet
-  surfaced in the CLI summary line.
+- **`check` / `summary` totals report the default profile.** The full
+  per-profile detail is surfaced in the CLI via `check --profiles` and in the
+  `profiles` field of `check --json` (and the programmatic `analyze()` API,
+  `pkg.profiles`); the rolled-up `summary` line stays default-profile only.
 - **Fill copies from a sibling package's value.** It does not invent or fetch
   secrets. If no sibling has the key, there's nothing to fill from.
 - **Workspace detection** reads `pnpm-workspace.yaml` and `package.json`

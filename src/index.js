@@ -9,9 +9,11 @@ export {
   resolvePackageDirs,
   isEnvFileName,
   isExampleName,
+  toPosix,
 } from "./discover.js";
 export { analyze, summarize, headline, pickPrimary } from "./summarize.js";
 export { check, checkReport } from "./check.js";
+export { auditCommittedSecrets, formatAudit } from "./audit.js";
 export { applyEnvUpdates, safeEnvTarget } from "./write-env.js";
 export {
   classifyEnvFile,

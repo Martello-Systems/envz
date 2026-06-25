@@ -51,8 +51,11 @@ test("preserves export prefix when updating", async () => {
 
 test("safeEnvTarget accepts an in-workspace .env path", () => {
   const root = "/work/repo";
-  assert.equal(safeEnvTarget(root, "packages/web/.env"), path.join(root, "packages/web/.env"));
-  assert.equal(safeEnvTarget(root, "packages/web/.env.local"), path.join(root, "packages/web/.env.local"));
+  // Compare against path.resolve (what safeEnvTarget computes): on Windows a
+  // bare POSIX root like "/work/repo" resolves to the current drive, so the
+  // expectation must resolve the same way to stay cross-platform.
+  assert.equal(safeEnvTarget(root, "packages/web/.env"), path.resolve(root, "packages/web/.env"));
+  assert.equal(safeEnvTarget(root, "packages/web/.env.local"), path.resolve(root, "packages/web/.env.local"));
 });
 
 test("safeEnvTarget rejects path traversal outside the workspace", () => {

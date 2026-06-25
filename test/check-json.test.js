@@ -96,6 +96,25 @@ test("envz check --json --allow-empty drops empty from failures", async () => {
   assert.equal(code, 1);
 });
 
+test("checkReport surfaces the per-profile breakdown per package", async () => {
+  const r = await checkReport(CLEAN_ROOT);
+  const svc = r.packages.find((p) => p.relDir === "packages/svc");
+  assert.ok(svc, "svc package present");
+  const profileNames = svc.profiles.map((p) => p.profile);
+  assert.deepEqual(profileNames, ["default", "production"]); // default first
+  const prod = svc.profiles.find((p) => p.profile === "production");
+  assert.equal(prod.templateFile, "packages/svc/.env.production.example");
+  assert.deepEqual(prod.layers, [".env", ".env.production", ".env.local"]);
+  // still JSON-serializable with the new field
+  JSON.parse(JSON.stringify(r));
+});
+
+test("envz check --profiles prints a per-profile breakdown", async () => {
+  const { stdout } = await execFileP(process.execPath, [BIN, "check", CLEAN_ROOT, "--profiles"]);
+  assert.match(stdout, /profile default:/);
+  assert.match(stdout, /profile production:/);
+});
+
 test("envz check on a non-existent path errors cleanly (no stack trace)", async () => {
   let stderr, code;
   try {

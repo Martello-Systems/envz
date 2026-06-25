@@ -12,12 +12,17 @@ Usage:
   envz [path]            Launch the interactive TUI (default: current dir)
   envz check [path]      Non-interactive CI check; exits non-zero on missing keys
   envz summary [path]    Print a one-line workspace summary
+  envz audit [path]      Flag .env files with real values that git tracks / doesn't ignore
   envz --help            Show this help
 
 Options for 'check':
   --json                 Emit a machine-readable JSON report (CI-friendly)
   --allow-empty          Don't fail on present-but-empty keys
   --fail-on-extra        Also fail when env has keys not in .env.example
+  --profiles             Show the per-profile breakdown (default + named profiles)
+
+Options for 'audit':
+  --json                 Emit a machine-readable JSON report (CI-friendly)
 
 The monorepo angle: envz understands pnpm-workspace.yaml and package.json
 "workspaces", groups .env files by package, and diffs each against its
@@ -55,6 +60,7 @@ async function main() {
     const opts = {
       allowEmpty: args.includes("--allow-empty"),
       failOnExtra: args.includes("--fail-on-extra"),
+      profiles: args.includes("--profiles"),
     };
 
     if (args.includes("--json")) {
@@ -68,6 +74,21 @@ async function main() {
     const result = await check(root, opts);
     console.log(result.lines.join("\n"));
     process.exit(result.ok ? 0 : 1);
+  }
+
+  if (cmd === "audit") {
+    const positional = args.slice(1).find((a) => !a.startsWith("-"));
+    const root = resolveRoot(positional);
+    await assertDir(root);
+    const { auditCommittedSecrets, formatAudit } = await import("../src/audit.js");
+    const report = await auditCommittedSecrets(root);
+
+    if (args.includes("--json")) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(formatAudit(report).join("\n"));
+    }
+    process.exit(report.ok ? 0 : 1);
   }
 
   if (cmd === "summary") {

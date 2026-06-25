@@ -18,7 +18,11 @@ import { summarize } from "./summarize.js";
  *     name: string, relDir: string, isRoot: boolean,
  *     hasExample: boolean, hasEnv: boolean,
  *     exampleFile: string|null, envFile: string|null,
- *     missing: string[], empty: string[], extra: string[], present: string[]
+ *     missing: string[], empty: string[], extra: string[], present: string[],
+ *     profiles: {
+ *       profile: string, templateFile: string|null, layers: string[],
+ *       missing: string[], empty: string[], extra: string[], present: string[]
+ *     }[]
  *   }[]
  * }>}
  */
@@ -48,6 +52,16 @@ export async function checkReport(root, opts = {}) {
       empty,
       extra,
       present,
+      // full per-profile breakdown (default + any named profiles like production)
+      profiles: pkg.profiles.map((p) => ({
+        profile: p.profile,
+        templateFile: p.templateFile,
+        layers: p.layers,
+        missing: p.diff.missing,
+        empty: p.diff.empty,
+        extra: p.diff.extra,
+        present: p.diff.present,
+      })),
     });
 
     failures += missing.length;
@@ -77,11 +91,11 @@ export async function checkReport(root, opts = {}) {
  * required key fails the check.
  *
  * @param {string} root absolute workspace root
- * @param {{ allowEmpty?: boolean, failOnExtra?: boolean }} [opts]
+ * @param {{ allowEmpty?: boolean, failOnExtra?: boolean, profiles?: boolean }} [opts]
  * @returns {Promise<{ ok: boolean, lines: string[], report: Awaited<ReturnType<typeof checkReport>> }>}
  */
 export async function check(root, opts = {}) {
-  const { allowEmpty = false, failOnExtra = false } = opts;
+  const { allowEmpty = false, failOnExtra = false, profiles = false } = opts;
   const report = await checkReport(root, opts);
   const lines = [];
 
@@ -109,6 +123,18 @@ export async function check(root, opts = {}) {
     for (const k of missing) lines.push(`      - missing: ${k}`);
     if (!allowEmpty) for (const k of empty) lines.push(`      - empty:   ${k}`);
     if (failOnExtra) for (const k of extra) lines.push(`      - extra:   ${k}`);
+
+    if (profiles) {
+      for (const prof of pkg.profiles) {
+        const parts = [];
+        if (prof.missing.length) parts.push(`${prof.missing.length} missing`);
+        if (prof.empty.length) parts.push(`${prof.empty.length} empty`);
+        if (prof.extra.length) parts.push(`${prof.extra.length} extra`);
+        const profStatus = parts.length ? parts.join(", ") : "ok";
+        const tmpl = prof.templateFile ? ` ← ${prof.templateFile}` : "";
+        lines.push(`      · profile ${prof.profile}: ${profStatus}${tmpl}`);
+      }
+    }
   }
 
   lines.push("");
