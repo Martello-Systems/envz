@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, rename as fsRename, unlink } from "node:fs/promises";
 import path from "node:path";
 
 /**
@@ -37,11 +37,18 @@ export function safeEnvTarget(root, candidate) {
  * This is the one impure helper the TUI/CLI use to persist {@link fillFromSibling}
  * results. It is intentionally separate from the pure domain logic.
  *
+ * The write is ATOMIC: the new contents are written to a temp file in the same
+ * directory and then renamed over the target, so a crash mid-write can never
+ * leave the user's real `.env` truncated or half-written.
+ *
  * @param {string} filePath absolute path to the target .env
  * @param {Record<string,string>} updates key->new value
+ * @param {{ rename?: (from:string,to:string)=>Promise<void> }} [opts]
+ *   `rename` is injectable so the atomic-swap path can be exercised in tests;
+ *   it defaults to `fs.promises.rename`.
  * @returns {Promise<{applied: string[], appended: string[]}>}
  */
-export async function applyEnvUpdates(filePath, updates) {
+export async function applyEnvUpdates(filePath, updates, opts = {}) {
   let content = "";
   try {
     content = await readFile(filePath, "utf8");
@@ -82,15 +89,80 @@ export async function applyEnvUpdates(filePath, updates) {
 
   let out = updated.join(eol);
   if (!out.endsWith(eol)) out += eol;
-  await writeFile(filePath, out, "utf8");
+  await atomicWrite(filePath, out, opts.rename || fsRename);
 
   return { applied, appended };
 }
 
-function formatValue(value) {
+/**
+ * Write `data` to `filePath` atomically: stage it in a sibling temp file, then
+ * rename the temp over the target. Because the rename is the only operation that
+ * touches `filePath`, an interruption (crash, power loss, thrown error) leaves
+ * the original file completely intact rather than truncated.
+ *
+ * Windows can refuse a rename-over-existing with EEXIST/EPERM/EACCES (the target
+ * may be momentarily locked). In that case the original is moved aside to a
+ * backup first — so it is always recoverable — before the temp is swapped in;
+ * the original is restored if the swap then fails. The user is never left with
+ * no file.
+ *
+ * @param {string} filePath target path
+ * @param {string} data contents to write
+ * @param {(from:string,to:string)=>Promise<void>} rename rename implementation
+ */
+async function atomicWrite(filePath, data, rename) {
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath);
+  const tag = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const tmp = path.join(dir, `.${base}.${tag}.tmp`);
+
+  await writeFile(tmp, data, "utf8");
+
+  try {
+    await rename(tmp, filePath);
+    return;
+  } catch (err) {
+    if (err && (err.code === "EEXIST" || err.code === "EPERM" || err.code === "EACCES")) {
+      const bak = path.join(dir, `.${base}.${tag}.bak`);
+      try {
+        await rename(filePath, bak); // move original aside (still recoverable)
+      } catch {
+        await unlink(tmp).catch(() => {});
+        throw err; // original untouched; drop the temp
+      }
+      try {
+        await rename(tmp, filePath);
+        await unlink(bak).catch(() => {});
+        return;
+      } catch (err2) {
+        await rename(bak, filePath).catch(() => {}); // restore original
+        await unlink(tmp).catch(() => {});
+        throw err2;
+      }
+    }
+    await unlink(tmp).catch(() => {}); // original untouched; drop the temp
+    throw err;
+  }
+}
+
+/**
+ * Serialize a single value for a `.env` file. Empty -> bare `KEY=`. Anything
+ * with whitespace, `#`, quotes, a backslash, or a newline is double-quoted with
+ * `\\`, `\n`, `\r`, `\t`, and `"` escaped, so that {@link parseEnv} reads back
+ * the exact original value (a lossless parse<->serialize round-trip).
+ * @param {string} value
+ * @returns {string}
+ */
+export function formatValue(value) {
   if (value === "") return "";
-  if (/[\s#"']/.test(value)) {
-    return `"${value.replace(/"/g, '\\"')}"`;
+  if (/[\s#"'\\]/.test(value)) {
+    const esc = value
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, "\\n")
+      .replace(/\r/g, "\\r")
+      .replace(/\t/g, "\\t");
+    return `"${esc}"`;
   }
   return value;
 }
