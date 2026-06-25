@@ -13,24 +13,33 @@
     "bin",
     "src",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "test": "node --test",
     "lint": "eslint bin src test",
-    "start": "node bin/envz.js"
+    "start": "node bin/envz.js",
+    "prepublishOnly": "npm run lint && npm test"
   },
   "keywords": [
     "env",
     "dotenv",
     "tui",
     "monorepo",
-    "turborepo",
     "pnpm",
     "workspace",
     "environment-variables",
     "cli"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Martello-Systems/envz.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Martello-Systems/envz/issues"
+  },
+  "homepage": "https://github.com/Martello-Systems/envz#readme",
   "author": "Martello Systems",
   "license": "Apache-2.0",
   "engines": {

@@ -6,7 +6,7 @@
 environment variables across the packages and profiles of a JS monorepo.
 
 Most `.env` tooling treats your repo as one flat folder. Real JS monorepos
-(Turborepo, pnpm workspaces, npm/yarn workspaces) have a `.env` per package plus
+(pnpm workspaces, npm/yarn workspaces) have a `.env` per package plus
 a root one, each with its own `.env.example`. Keys drift. Someone adds
 `ANALYTICS_KEY` to `.env.example` and forgets to tell you. `envz` shows the whole
 landscape at a glance and lets you fill a missing key straight from a sibling
@@ -181,13 +181,14 @@ profile-specific `.env.<p>.example` and falling back to the default
 case). The full per-profile breakdown is available programmatically via
 `analyze()` (`pkg.profiles`).
 
-### "Fill from which sibling profile?"
+### Filling a key from a sibling
 
 When you press `f`, `envz` looks across **sibling packages** in the same
-workspace for one whose effective `.env` has a non-empty value for the selected
-key, and copies that value into the target's `.env`. It never overwrites a value
-you've already set, and it never writes outside the workspace or to a non-`.env`
-file.
+workspace and auto-picks the first one whose effective `.env` has a non-empty
+value for the selected key, then copies that value into the target's `.env`.
+(There is no donor picker — it takes the first sibling that has the value.) It
+never overwrites a value you've already set, and it never writes outside the
+workspace or to a non-`.env` file.
 
 ## The TUI
 
