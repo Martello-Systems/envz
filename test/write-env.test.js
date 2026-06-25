@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile, readdir } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, readdir, rename as fsRename } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { applyEnvUpdates, safeEnvTarget } from "../src/write-env.js";
@@ -12,6 +12,13 @@ async function tmpFile(content) {
   await writeFile(file, content, "utf8");
   return file;
 }
+
+const PEM_BLOCK = [
+  "-----BEGIN PRIVATE KEY-----",
+  "MIIBVgIBADANBgkqhkiG9w0BAQEFAASCAUAwggE8AgEAAkEA0aB",
+  "c2hvcnQga2V5IGZvciB0ZXN0aW5nIG9ubHkgbm90IHJlYWw9PQ==",
+  "-----END PRIVATE KEY-----",
+].join("\n");
 
 test("replaces an existing key's value in place, keeping comments", async () => {
   const file = await tmpFile("# top\nA=old\nB=keep\n");
@@ -97,6 +104,68 @@ test("a normal write produces correct content with no leftover temp file", async
 
   const left = await readdir(dir);
   assert.deepEqual(left, [".env"]); // only the target, no .tmp/.bak
+});
+
+test("replacing a key whose value is multi-line drops its continuation lines (no orphans)", async () => {
+  const file = await tmpFile(`TLS_KEY="${PEM_BLOCK}"\nOTHER=foo\n`);
+  const { applied, appended } = await applyEnvUpdates(file, { TLS_KEY: "short" });
+  assert.deepEqual(applied, ["TLS_KEY"]);
+  assert.deepEqual(appended, []);
+
+  const out = await readFile(file, "utf8");
+  const parsed = parseEnv(out);
+  // exactly two keys remain — no orphaned PEM lines re-parsed as bogus keys
+  assert.deepEqual(parsed.keys, ["TLS_KEY", "OTHER"]);
+  assert.equal(parsed.values.TLS_KEY, "short");
+  assert.equal(parsed.values.OTHER, "foo");
+  assert.ok(out.includes("TLS_KEY=short"));
+  assert.ok(out.includes("OTHER=foo"));
+  assert.ok(!out.includes("BEGIN PRIVATE KEY"), "old PEM body must be gone");
+  assert.deepEqual(await readdir(path.dirname(file)), [".env"]);
+});
+
+test("updating a DIFFERENT key leaves a multi-line value byte-identical", async () => {
+  const original = `TLS_KEY="${PEM_BLOCK}"\nOTHER=foo\n`;
+  const file = await tmpFile(original);
+  await applyEnvUpdates(file, { OTHER: "bar" });
+
+  const out = await readFile(file, "utf8");
+  assert.ok(out.includes(`TLS_KEY="${PEM_BLOCK}"`), "multi-line block untouched");
+  const parsed = parseEnv(out);
+  assert.equal(parsed.values.TLS_KEY, PEM_BLOCK);
+  assert.equal(parsed.values.OTHER, "bar");
+  assert.deepEqual(parsed.keys, ["TLS_KEY", "OTHER"]);
+});
+
+test("a failed restore surfaces an error naming the backup (never silently swallowed)", async () => {
+  const original = "# keep me\nA=original\nB=keepme\n";
+  const file = await tmpFile(original);
+
+  // Simulate Windows: swap onto the target keeps failing with EPERM, and the
+  // final restore (bak -> target) also fails. The original must end up in .bak
+  // and the thrown error must point at it.
+  const rename = async (from, to) => {
+    if (from.endsWith(".bak")) throw new Error("restore boom"); // restore fails
+    if (from.endsWith(".tmp")) {
+      throw Object.assign(new Error("locked"), { code: "EPERM" }); // swap fails
+    }
+    return fsRename(from, to); // original -> .bak (real move)
+  };
+
+  let caught;
+  await assert.rejects(
+    applyEnvUpdates(file, { A: "new" }, { rename }),
+    (err) => {
+      caught = err;
+      return err.code === "EENVZRESTORE" && typeof err.backupPath === "string";
+    }
+  );
+
+  // The prior contents are intact in the backup the error names...
+  assert.equal(await readFile(caught.backupPath, "utf8"), original);
+  // ...and the temp file was cleaned up (only the .bak remains).
+  const left = await readdir(path.dirname(file));
+  assert.deepEqual(left, [path.basename(caught.backupPath)]);
 });
 
 test("safeEnvTarget accepts an in-workspace .env path", () => {

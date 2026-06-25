@@ -134,3 +134,17 @@ test("value with backslashes/quotes survives a round-trip", () => {
   assert.equal(roundTrips('he said "hi"'), 'he said "hi"');
   assert.equal(roundTrips("tab\tseparated"), "tab\tseparated");
 });
+
+test("CRLF-authored multi-line value preserves its \\r\\n interior", () => {
+  // file written on Windows: the value's interior line ends are CRLF
+  const content = 'K="a\r\nb\r\nc"\r\nNEXT=ok\r\n';
+  const { values, keys } = parseEnv(content);
+  assert.equal(values.K, "a\r\nb\r\nc");
+  assert.equal(values.NEXT, "ok");
+  assert.deepEqual(keys, ["K", "NEXT"]);
+});
+
+test("trailing whitespace inside an open quote on line 1 is preserved", () => {
+  const content = 'K="foo   \nbar"\n';
+  assert.equal(parseEnv(content).values.K, "foo   \nbar");
+});
