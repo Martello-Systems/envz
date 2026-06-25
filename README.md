@@ -270,7 +270,7 @@ written), and `check --json` is tested for both shape and exit code. All fixture
 
 ## License
 
-MIT © 2026 Martello Systems
+Apache-2.0 © 2026 Martello Systems
 
 ---
 
