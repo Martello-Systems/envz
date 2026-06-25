@@ -107,7 +107,7 @@ count, `--fail-on-extra` adds `extra`.
 
 ## Profiles & precedence
 
-Real repos don't just have `.env` and `.env.example` — they have `.env.local`,
+Real repos don't just have `.env` and `.env.example`. They have `.env.local`,
 `.env.production`, `.env.production.local`, profile-specific templates, and so
 on. `envz` groups every file into a **profile** (a named environment) and applies
 one explicit precedence rule per profile, matching what Next.js / `dotenv-flow`
@@ -135,7 +135,7 @@ named profile <p>:    .env.<p>.local  >  .env.local  >  .env.<p>  >  .env
 ```
 
 A key counts as **satisfied** if any layer in the profile provides a non-empty
-value — so a secret you keep only in `.env.local` correctly clears the
+value, so a secret you keep only in `.env.local` correctly clears the
 "missing/empty" flag for that key.
 
 **Required keys** for a profile come from its template, preferring the
@@ -159,7 +159,7 @@ file.
 Three panes: **package tree → that package's keys → the diff detail**. Drifted
 packages are flagged in red; missing keys are highlighted. Press `f` on a
 missing/empty key to fill it from a sibling package that already has a value for
-it — existing values are never overwritten.
+it. Existing values are never overwritten.
 
 ```
 envz monorepo
@@ -208,12 +208,12 @@ console.log(s.missingTotal, s.driftedPackages);
 
 ```bash
 npm install
-npm test        # node:test — domain logic, profile rules, JSON check, real TUI keypress tests
+npm test        # node:test, domain logic, profile rules, JSON check, real TUI keypress tests
 npm run lint    # eslint (flat config)
 ```
 
 The correctness proof lives in `test/` against fake monorepo fixtures under
-`test/fixtures/` — `monorepo/` (root + `packages/web` + `packages/api`,
+`test/fixtures/`: `monorepo/` (root + `packages/web` + `packages/api`,
 exercising missing / empty / extra / present) and `profiles/` (multi-profile
 precedence with `.env.local` and `.env.production`). The TUI tests drive real
 keypresses through `ink-testing-library` (navigate → fill → assert the file was
@@ -223,11 +223,11 @@ written), and `check --json` is tested for both shape and exit code. All fixture
 ## Limitations
 
 - **Reads the files on disk only.** No secret storage, encryption, or vault sync
-  — that's [Infisical](https://infisical.com)'s lane, on purpose.
+  (that's [Infisical](https://infisical.com)'s lane, on purpose).
 - **`check` / `summary` report the default profile.** Per-profile detail is
   available via the programmatic `analyze()` API (`pkg.profiles`), not yet
   surfaced in the CLI summary line.
-- **Fill copies from a sibling package's value** — it does not invent or fetch
+- **Fill copies from a sibling package's value.** It does not invent or fetch
   secrets. If no sibling has the key, there's nothing to fill from.
 - **Workspace detection** reads `pnpm-workspace.yaml` and `package.json`
   `"workspaces"`. A repo with neither is treated as a single (root) package.
@@ -238,7 +238,7 @@ MIT © 2026 Martello Systems
 
 ---
 
-Built by **[Martello Systems](https://martellosystems.com)** — we build
+Built by **[Martello Systems](https://martellosystems.com)**. We build
 AI-assisted software and dev tooling. This is one of a family of open-source dev
 tools we use internally and released. See what we build → open an issue, or get
 in touch.
@@ -247,6 +247,6 @@ in touch.
 
 ## Built by Martello Systems
 
-`envz` is part of the open-source toolkit from **[Martello Systems](https://martellosystems.com)** — we ship AI-built software, spec to delivery in days. If this saved you time, come [see what we do](https://martellosystems.com).
+`envz` is part of the open-source toolkit from **[Martello Systems](https://martellosystems.com)**. We ship AI-built software, spec to delivery in days. If this saved you time, come [see what we do](https://martellosystems.com).
 
 Licensed under the [Apache License 2.0](LICENSE).

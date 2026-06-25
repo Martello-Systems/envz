@@ -55,7 +55,7 @@ export async function readWorkspaceGlobs(root) {
     /* not a pnpm workspace */
   }
 
-  // package.json "workspaces" (npm/yarn) — array or { packages: [...] }
+  // package.json "workspaces" (npm/yarn): array or { packages: [...] }
   try {
     const raw = await readFile(path.join(root, "package.json"), "utf8");
     const pkg = JSON.parse(raw);

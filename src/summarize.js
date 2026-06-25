@@ -112,7 +112,7 @@ async function diffProfiles(envFiles) {
  * Build a full per-package analysis of a workspace.
  *
  * `diff` (top-level) reflects the DEFAULT profile (the `.env` + `.env.local`
- * stack vs `.env.example`) — the common case and what `check`/`summary` report
+ * stack vs `.env.example`), the common case and what `check`/`summary` report
  * on. `profiles` carries the per-profile breakdown for richer consumers.
  *
  * @param {string} root absolute workspace root

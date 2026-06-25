@@ -6,7 +6,7 @@ import { stat } from "node:fs/promises";
 const args = process.argv.slice(2);
 const cmd = args[0];
 
-const HELP = `envz — lazygit for your .env files
+const HELP = `envz: lazygit for your .env files
 
 Usage:
   envz [path]            Launch the interactive TUI (default: current dir)

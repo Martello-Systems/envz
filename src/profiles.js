@@ -21,7 +21,7 @@
  *
  * Recognised template suffixes: example, sample, template, dist.
  * "local" is a layered override (gitignored personal values), not its own
- * profile — `.env.local` overrides `.env` within the *default* profile, and
+ * profile. `.env.local` overrides `.env` within the *default* profile, and
  * `.env.<p>.local` overrides `.env.<p>` within profile <p>.
  *
  * ──────────────────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ export function classifyEnvFile(name) {
     return { name, profile: DEFAULT_PROFILE, isTemplate: false, isLocal: false };
   }
 
-  // ".env.<segments>" — split into dot-separated segments.
+  // ".env.<segments>": split into dot-separated segments.
   let segments = name.slice(".env.".length).split("."); // e.g. ["production","local"]
 
   // template suffix is the LAST segment if it's a known suffix

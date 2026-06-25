@@ -113,7 +113,7 @@ export async function check(root, opts = {}) {
 
   lines.push("");
   lines.push(
-    report.ok ? "PASS — all required keys satisfied." : `FAIL — ${report.failures} issue(s).`
+    report.ok ? "PASS: all required keys satisfied." : `FAIL: ${report.failures} issue(s).`
   );
 
   return { ok: report.ok, lines, report };
