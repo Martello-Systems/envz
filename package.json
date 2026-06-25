@@ -1,5 +1,6 @@
 {
   "name": "@martello-systems/envz",
+  "publishConfig": { "access": "public" },
   "version": "0.1.0",
   "description": "lazygit for your .env files: a monorepo-native TUI to browse, diff, and sync environment variables across packages and profiles in a JS monorepo.",
   "type": "module",
